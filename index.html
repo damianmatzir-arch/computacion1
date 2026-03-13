@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Cuestionario</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh; padding: 20px; color: #333;
+}
+.container { max-width: 700px; margin: 0 auto; }
+.header { text-align: center; color: #fff; padding: 30px 20px; }
+.header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+.header .meta { font-size: 14px; opacity: 0.9; }
+.progress-bar { background: rgba(255,255,255,0.3); border-radius: 10px; height: 8px; margin: 20px 0; overflow: hidden; }
+.progress-fill { background: #fff; height: 100%; width: 0%; transition: width 0.4s ease; border-radius: 10px; }
+.question { background: #fff; border-radius: 16px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: none; }
+.question.active { display: block; }
+.q-header { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; color: #888; }
+.q-number { font-weight: 600; color: #667eea; }
+.q-text { font-size: 18px; font-weight: 600; line-height: 1.5; margin-bottom: 25px; color: #222; }
+.options { display: flex; flex-direction: column; gap: 12px; }
+.option-wrapper { display: flex; flex-direction: column; }
+.option {
+  display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px;
+  border: 2px solid #e8e8e8; border-radius: 12px; background: #fafafa;
+  cursor: pointer; transition: all 0.2s; text-align: left; font-size: 15px; width: 100%;
+}
+[dir="rtl"] .option { text-align: right; flex-direction: row-reverse; }
+.option:hover:not(.disabled) { border-color: #667eea; background: #f5f3ff; }
+.option.selected { border-color: #667eea; background: #ede9fe; }
+.option.correct { border-color: #22c55e; background: #dcfce7; }
+.option.incorrect { border-color: #ef4444; background: #fee2e2; }
+.option.disabled { cursor: default; }
+.option.show-correct { border-color: #22c55e; background: #dcfce7; }
+.opt-label {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 50%; background: #e8e8e8;
+  font-weight: 700; font-size: 14px; flex-shrink: 0;
+}
+.option.selected .opt-label { background: #667eea; color: #fff; }
+.option.correct .opt-label { background: #22c55e; color: #fff; }
+.option.incorrect .opt-label { background: #ef4444; color: #fff; }
+.option.show-correct .opt-label { background: #22c55e; color: #fff; }
+.opt-text { padding-top: 5px; line-height: 1.5; }
+
+/* Individual option feedback */
+.option-feedback {
+  margin: 8px 0 4px 46px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+[dir="rtl"] .option-feedback { margin-left: 0; margin-right: 46px; }
+.option-feedback.correct-feedback {
+  background: #dcfce7;
+  border-left: 3px solid #22c55e;
+}
+.option-feedback.incorrect-feedback {
+  background: #fef3f2;
+  border-left: 3px solid #fca5a5;
+}
+[dir="rtl"] .option-feedback.correct-feedback,
+[dir="rtl"] .option-feedback.incorrect-feedback {
+  border-left: none;
+  border-right: 3px solid;
+}
+[dir="rtl"] .option-feedback.correct-feedback { border-right-color: #22c55e; }
+[dir="rtl"] .option-feedback.incorrect-feedback { border-right-color: #fca5a5; }
+.feedback-status {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.feedback-status.correct { color: #166534; }
+.feedback-status.incorrect { color: #991b1b; }
+.feedback-rationale { color: #444; }
+
+/* Hint box */
+.hint-box {
+  margin: 12px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+}
+.hint-toggle {
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #92400e;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hint-toggle:hover { background: #fef3c7; }
+.hint-content {
+  padding: 0 16px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s, padding 0.3s;
+  font-size: 14px;
+  color: #78350f;
+  line-height: 1.5;
+}
+.hint-box.show .hint-content {
+  padding: 0 16px 12px;
+  max-height: 200px;
+}
+
+.next-btn {
+  margin-top: 20px; width: 100%; padding: 14px;
+  background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border: none;
+  border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102,126,234,0.4); }
+.hidden { display: none !important; }
+.results { background: #fff; border-radius: 16px; padding: 40px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: none; }
+.results.active { display: block; }
+.results h2 { font-size: 28px; margin-bottom: 10px; color: #333; }
+.results .score { font-size: 64px; font-weight: 700; color: #667eea; margin: 20px 0; }
+.results .score-text { font-size: 18px; color: #666; margin-bottom: 30px; }
+.restart-btn {
+  padding: 14px 40px; background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+
+/* Math CSS */
+.math, .math-block { font-family: "Cambria Math", "Times New Roman", Times, serif; font-style: italic; }
+.math-block { display: block; text-align: center; margin: 10px 0; font-size: 110%; }
+.frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; font-size: 0.9em; }
+.frac-num { border-bottom: 1px solid currentColor; padding: 0 4px 2px; line-height: 1.2; }
+.frac-den { padding: 2px 4px 0; line-height: 1.2; }
+.sqrt { white-space: nowrap; }
+.sqrt-content { border-top: 1px solid currentColor; padding: 0 3px; margin-left: 2px; }
+sup, sub { font-size: 0.75em; }
+sup { vertical-align: super; }
+sub { vertical-align: sub; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Word Cuestionario</h1>
+    <div class="meta">30 questions</div>
+    <div class="progress-bar"><div class="progress-fill"></div></div>
+  </div>
+  <div id="quiz-container">
+        <div class="question" data-index="0">
+          <div class="q-header">
+            <span class="q-number">Question 1</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Cuál es la función primordial de Microsoft Word dentro de un entorno profesional?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="La gestión de bases de datos es una función característica de programas como Microsoft Access, no de un procesador de texto.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Crear y gestionar bases de datos complejas.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La gestión de bases de datos es una función característica de programas como Microsoft Access, no de un procesador de texto.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Microsoft Word está diseñado específicamente para la redacción, edición y formato de diversos tipos de documentos escritos.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Procesar textos para crear documentos profesionales y académicos.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Microsoft Word está diseñado específicamente para la redacción, edición y formato de diversos tipos de documentos escritos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Esta es la función principal de las hojas de cálculo como Microsoft Excel.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Realizar cálculos matemáticos y análisis de datos mediante celdas.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta es la función principal de las hojas de cálculo como Microsoft Excel.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Word carece de herramientas para la edición multimedia avanzada de video o audio.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Editar videos y archivos de audio de alta fidelidad.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Word carece de herramientas para la edición multimedia avanzada de video o audio.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="1">
+          <div class="q-header">
+            <span class="q-number">Question 2</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Al iniciar un nuevo proyecto en Word, ¿qué opción se debe elegir para comenzar desde una página sin contenido previo?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Esta opción se utiliza para crear contenido optimizado para navegadores, no es el punto de partida estándar para documentos.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Nuevo diseño web</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta opción se utiliza para crear contenido optimizado para navegadores, no es el punto de partida estándar para documentos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Seleccionar un documento en blanco proporciona un lienzo limpio y listo para la entrada de texto manual.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Documento en blanco</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Seleccionar un documento en blanco proporciona un lienzo limpio y listo para la entrada de texto manual.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Las plantillas ya contienen estructuras y diseños predefinidos que no corresponden a una página vacía.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Plantilla de currículum</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Las plantillas ya contienen estructuras y diseños predefinidos que no corresponden a una página vacía.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Esta opción carga un trabajo guardado previamente en lugar de iniciar uno nuevo desde cero.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Abrir archivo reciente</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta opción carga un trabajo guardado previamente en lugar de iniciar uno nuevo desde cero.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="2">
+          <div class="q-header">
+            <span class="q-number">Question 3</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Qué indica el cursor parpadeante en el área de trabajo de Word?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="true" data-rationale="El cursor actúa como un marcador de posición visual para la entrada de caracteres a través del teclado.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">El lugar exacto donde aparecerá el texto al escribir.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El cursor actúa como un marcador de posición visual para la entrada de caracteres a través del teclado.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="false" data-rationale="Los errores ortográficos se señalan generalmente con líneas de colores, no con el cursor de escritura.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Un error de ortografía detectado automáticamente.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Los errores ortográficos se señalan generalmente con líneas de colores, no con el cursor de escritura.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="El guardado automático suele indicarse en la barra de título o estado, no mediante el cursor.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Que el documento se está guardando automáticamente.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El guardado automático suele indicarse en la barra de título o estado, no mediante el cursor.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Los márgenes están delimitados por la regla o el espacio gris del área de trabajo, no por el cursor parpadeante.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">El límite del margen derecho de la página.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Los márgenes están delimitados por la regla o el espacio gris del área de trabajo, no por el cursor parpadeante.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="3">
+          <div class="q-header">
+            <span class="q-number">Question 4</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Cuál es la combinación de teclas estándar para guardar los cambios en un documento ya existente?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Aunque en algunas versiones en español se usa esta tecla, el estándar universal mencionado en la guía educativa es diferente.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Ctrl + G</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Aunque en algunas versiones en español se usa esta tecla, el estándar universal mencionado en la guía educativa es diferente.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="false" data-rationale="Este atajo se utiliza para abrir el menú de impresión del documento.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Ctrl + P</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Este atajo se utiliza para abrir el menú de impresión del documento.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="true" data-rationale="Ctrl + S es el comando rápido para actualizar el archivo con los cambios más recientes.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Ctrl + S</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Ctrl + S es el comando rápido para actualizar el archivo con los cambios más recientes.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Esta combinación se utiliza para pegar contenido que se encuentra en el portapapeles.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Ctrl + V</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta combinación se utiliza para pegar contenido que se encuentra en el portapapeles.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="4">
+          <div class="q-header">
+            <span class="q-number">Question 5</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Dentro de la interfaz de Word, ¿cómo se denomina la franja superior que organiza las herramientas en pestañas?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="La barra de estado se encuentra en la parte inferior y muestra información sobre el documento.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Barra de estado</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La barra de estado se encuentra en la parte inferior y muestra información sobre el documento.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="El Ribbon agrupa funciones relacionadas en pestañas como Inicio, Insertar y Diseño para facilitar el acceso.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Cinta de opciones o Ribbon</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El Ribbon agrupa funciones relacionadas en pestañas como Inicio, Insertar y Diseño para facilitar el acceso.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Esta es una pequeña barra personalizable con iconos de uso frecuente, no la estructura principal de pestañas.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Menú de inicio rápido</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta es una pequeña barra personalizable con iconos de uso frecuente, no la estructura principal de pestañas.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="El área de navegación suele ser un panel lateral para buscar texto o moverse por títulos.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Área de navegación</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El área de navegación suele ser un panel lateral para buscar texto o moverse por títulos.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="5">
+          <div class="q-header">
+            <span class="q-number">Question 6</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Si deseas seleccionar una palabra completa rápidamente sin arrastrar el ratón, ¿qué acción debes realizar?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="El clic derecho abre un menú contextual de opciones, pero no selecciona la palabra por sí solo.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Hacer clic derecho sobre la palabra.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El clic derecho abre un menú contextual de opciones, pero no selecciona la palabra por sí solo.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="El doble clic es un atajo de ratón diseñado para seleccionar automáticamente la unidad léxica bajo el cursor.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Hacer doble clic sobre la palabra.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El doble clic es un atajo de ratón diseñado para seleccionar automáticamente la unidad léxica bajo el cursor.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Esta combinación suele usarse para funciones de investigación o selección vertical, no para palabras individuales.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Presionar la tecla Alt y hacer clic.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta combinación suele usarse para funciones de investigación o selección vertical, no para palabras individuales.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Un solo clic solo posiciona el cursor en ese punto sin realizar ninguna selección de texto.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Hacer clic una sola vez al inicio de la palabra.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Un solo clic solo posiciona el cursor en ese punto sin realizar ninguna selección de texto.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="6">
+          <div class="q-header">
+            <span class="q-number">Question 7</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Cuál es la diferencia fundamental entre 'Cortar' (Ctrl + X) y 'Copiar' (Ctrl + C)?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Es exactamente al revés; la duplicación es característica de la copia.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">'Cortar' duplica el texto, mientras que 'Copiar' lo mueve a otro lugar.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Es exactamente al revés; la duplicación es característica de la copia.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Cortar traslada el contenido al portapapeles eliminándolo del origen, mientras que copiar crea una réplica exacta.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">'Cortar' elimina el texto de su ubicación original, mientras que 'Copiar' lo mantiene.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Cortar traslada el contenido al portapapeles eliminándolo del origen, mientras que copiar crea una réplica exacta.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Ambas funciones son locales del procesador de texto y no dependen de la red.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">'Copiar' requiere una conexión a internet, pero 'Cortar' no.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Ambas funciones son locales del procesador de texto y no dependen de la red.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Tienen propósitos distintos: uno para mover contenido y otro para replicarlo.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">No existe diferencia; ambas realizan la misma acción en el documento.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Tienen propósitos distintos: uno para mover contenido y otro para replicarlo.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="7">
+          <div class="q-header">
+            <span class="q-number">Question 8</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Qué alineación de texto es la más adecuada para darle a un documento formal un aspecto de libro con bordes rectos en ambos lados?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Esta alineación deja el borde derecho irregular, lo cual es común pero menos formal que el justificado.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Alinear a la izquierda</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta alineación deja el borde derecho irregular, lo cual es común pero menos formal que el justificado.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="false" data-rationale="Se usa principalmente para títulos y no crea bordes rectos laterales.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Alinear al centro</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Se usa principalmente para títulos y no crea bordes rectos laterales.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="true" data-rationale="El texto justificado distribuye el espacio entre palabras para que los párrafos se alineen perfectamente con ambos márgenes.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Texto justificado</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El texto justificado distribuye el espacio entre palabras para que los párrafos se alineen perfectamente con ambos márgenes.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Esta alineación se utiliza para fechas o firmas, dejando el borde izquierdo irregular.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Alinear a la derecha</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta alineación se utiliza para fechas o firmas, dejando el borde izquierdo irregular.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="8">
+          <div class="q-header">
+            <span class="q-number">Question 9</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Para enfatizar una palabra importante sin cambiar su tamaño ni su tipo de letra, ¿qué estilos de formato se recomiendan?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="true" data-rationale="Estos estilos modifican la apariencia visual del texto existente para destacar ideas clave de forma profesional.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Negrita, Cursiva o Subrayado</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Estos estilos modifican la apariencia visual del texto existente para destacar ideas clave de forma profesional.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="false" data-rationale="Aunque destaca, el uso excesivo de colores puede considerarse poco profesional en comparación con la negrita o cursiva.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Solo cambio de color a rojo</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Aunque destaca, el uso excesivo de colores puede considerarse poco profesional en comparación con la negrita o cursiva.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Escribir todo en mayúsculas dificulta la lectura y puede interpretarse como 'gritar' en la comunicación escrita.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Uso de mayúsculas en todo el párrafo</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Escribir todo en mayúsculas dificulta la lectura y puede interpretarse como 'gritar' en la comunicación escrita.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Es un proceso ineficiente que complica la estructura y edición del documento.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Insertar un cuadro de texto para cada palabra</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Es un proceso ineficiente que complica la estructura y edición del documento.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="9">
+          <div class="q-header">
+            <span class="q-number">Question 10</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿En qué situación es preferible utilizar una lista numerada en lugar de una lista con viñetas?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Las viñetas son ideales cuando el orden de los elementos no altera el resultado.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Para enumerar los ingredientes de una receta sin un orden específico.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Las viñetas son ideales cuando el orden de los elementos no altera el resultado.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="La numeración establece una jerarquía u orden cronológico necesario para seguir procesos correctamente.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Para describir una secuencia lógica de pasos o instrucciones.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La numeración establece una jerarquía u orden cronológico necesario para seguir procesos correctamente.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Las viñetas suelen ser suficientes para listas simples de conceptos desordenados.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Para presentar una lista de ideas en una lluvia de ideas.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Las viñetas suelen ser suficientes para listas simples de conceptos desordenados.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="El color se puede aplicar tanto a viñetas como a números, no define la elección entre ellos.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Cuando se desea usar diferentes colores en cada punto.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El color se puede aplicar tanto a viñetas como a números, no define la elección entre ellos.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="10">
+          <div class="q-header">
+            <span class="q-number">Question 11</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Al insertar una imagen en un documento, ¿qué tecla se debe mantener presionada mientras se arrastra una esquina para evitar que la imagen se deforme?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="En muchas versiones, Ctrl redimensiona desde el centro, pero no garantiza mantener la proporción por sí sola.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Ctrl</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">En muchas versiones, Ctrl redimensiona desde el centro, pero no garantiza mantener la proporción por sí sola.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Mantener presionada la tecla Shift bloquea la relación de aspecto, asegurando que el ancho y el alto cambien proporcionalmente.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Shift (Mayús)</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Mantener presionada la tecla Shift bloquea la relación de aspecto, asegurando que el ancho y el alto cambien proporcionalmente.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Alt se utiliza normalmente para un ajuste más fino ignorando la rejilla, no para mantener proporciones.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Alt</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Alt se utiliza normalmente para un ajuste más fino ignorando la rejilla, no para mantener proporciones.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="La tecla Tab se usa para navegación o sangrías, no influye en el redimensionamiento de imágenes.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Tab</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La tecla Tab se usa para navegación o sangrías, no influye en el redimensionamiento de imágenes.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="11">
+          <div class="q-header">
+            <span class="q-number">Question 12</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Si necesitas organizar datos comparativos, como horarios o listas de precios, ¿qué herramienta de Word es la más efectiva?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Las formas son útiles para diagramas, pero difíciles de alinear para datos tabulares precisos.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Formas y flechas</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Las formas son útiles para diagramas, pero difíciles de alinear para datos tabulares precisos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Las tablas permiten estructurar la información en filas y columnas, facilitando la comparación y lectura de datos.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Tablas</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Las tablas permiten estructurar la información en filas y columnas, facilitando la comparación y lectura de datos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Usar múltiples cuadros de texto para alinear datos es propenso a errores de formato y difícil de mantener.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Cuadros de texto independientes</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Usar múltiples cuadros de texto para alinear datos es propenso a errores de formato y difícil de mantener.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Las imágenes son elementos visuales estáticos y no permiten la edición de datos organizados.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Imágenes prediseñadas</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Las imágenes son elementos visuales estáticos y no permiten la edición de datos organizados.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="12">
+          <div class="q-header">
+            <span class="q-number">Question 13</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Cuál es la principal ventaja de guardar un documento en formato .pdf antes de compartirlo?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Al contrario, el PDF se utiliza para restringir la edición sencilla del contenido.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Permite que cualquier persona edite el texto fácilmente.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Al contrario, el PDF se utiliza para restringir la edición sencilla del contenido.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="El formato PDF preserva las fuentes, imágenes y el diseño original, evitando variaciones de visualización.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Asegura que el documento se vea igual en cualquier dispositivo o sistema operativo.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El formato PDF preserva las fuentes, imágenes y el diseño original, evitando variaciones de visualización.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Guardar como PDF no mejora la calidad de origen de las imágenes.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Aumenta automáticamente la resolución de todas las imágenes insertadas.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Guardar como PDF no mejora la calidad de origen de las imágenes.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="La impresión a color depende de la impresora y la configuración, no del formato del archivo.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Es el único formato que permite imprimir a color.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La impresión a color depende de la impresora y la configuración, no del formato del archivo.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="13">
+          <div class="q-header">
+            <span class="q-number">Question 14</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Antes de enviar un documento a la impresora, ¿qué paso es fundamental para evitar el desperdicio de papel y tinta?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Esto no previene errores de diseño o contenido y puede dificultar la lectura.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Cambiar el color de toda la fuente a gris.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esto no previene errores de diseño o contenido y puede dificultar la lectura.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="La vista previa permite verificar márgenes, saltos de página y diseño general antes de la impresión física.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Revisar la Vista Previa de Impresión.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La vista previa permite verificar márgenes, saltos de página y diseño general antes de la impresión física.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Reiniciar el programa no garantiza que el contenido del documento esté correctamente formateado.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Cerrar el programa y volverlo a abrir.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Reiniciar el programa no garantiza que el contenido del documento esté correctamente formateado.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Un zoom tan alto impide ver la disposición general de la página, que es lo que se refleja al imprimir.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Aumentar el zoom al <span class="math">500 %</span> para ver detalles.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Un zoom tan alto impide ver la disposición general de la página, que es lo que se refleja al imprimir.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="14">
+          <div class="q-header">
+            <span class="q-number">Question 15</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Qué utilidad tiene la 'Barra de Estado' ubicada en la parte inferior de la ventana de Word?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="El formato de fuente se gestiona desde la pestaña Inicio en la parte superior.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Contiene los botones para cambiar el tipo de letra.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El formato de fuente se gestiona desde la pestaña Inicio en la parte superior.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Proporciona metadatos en tiempo real sobre el estado y la extensión del documento actual.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Muestra información como el número de página, conteo de palabras y nivel de zoom.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Proporciona metadatos en tiempo real sobre el estado y la extensión del documento actual.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Los títulos se escriben directamente en el área de trabajo central.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Es donde se escriben los títulos principales del documento.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Los títulos se escriben directamente en el área de trabajo central.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="La búsqueda de archivos se realiza desde el explorador de archivos o el menú Abrir.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Permite buscar archivos guardados en el disco duro.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La búsqueda de archivos se realiza desde el explorador de archivos o el menú Abrir.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="15">
+          <div class="q-header">
+            <span class="q-number">Question 16</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Para qué sirve la combinación de teclas Ctrl + Z?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Ctrl + Z no tiene funciones de gestión de archivos en el disco, solo ediciones internas.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Para borrar permanentemente el archivo del sistema.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Ctrl + Z no tiene funciones de gestión de archivos en el disco, solo ediciones internas.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Es la función de 'marcha atrás' que permite corregir errores inmediatos volviendo al estado anterior.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Para deshacer la última acción realizada.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Es la función de 'marcha atrás' que permite corregir errores inmediatos volviendo al estado anterior.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="La negrita se aplica con Ctrl + B (en inglés Bold).">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Para aplicar el formato de negrita al texto.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La negrita se aplica con Ctrl + B (en inglés Bold).</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Existen otras combinaciones para la navegación, pero Ctrl + Z se limita a la edición.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Para saltar a la última página del documento.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Existen otras combinaciones para la navegación, pero Ctrl + Z se limita a la edición.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="16">
+          <div class="q-header">
+            <span class="q-number">Question 17</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">En el contexto de la edición de documentos, ¿qué significa 'Rehacer' (Ctrl + Y)?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Rehacer no implica borrar todo el trabajo previo.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Escribir el documento desde cero nuevamente.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Rehacer no implica borrar todo el trabajo previo.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Si deshiciste algo por error, Ctrl + Y recupera esa acción específica.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Volver a aplicar una acción que fue deshecha previamente.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Si deshiciste algo por error, Ctrl + Y recupera esa acción específica.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="El idioma se configura en las opciones de revisión, no con este atajo.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Cambiar el idioma del corrector ortográfico.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El idioma se configura en las opciones de revisión, no con este atajo.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="El guardado en la nube es un proceso de gestión de archivos independiente de la edición de texto.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Guardar una copia de seguridad en la nube.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El guardado en la nube es un proceso de gestión de archivos independiente de la edición de texto.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="17">
+          <div class="q-header">
+            <span class="q-number">Question 18</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Cuál es un consejo clave para mantener la profesionalidad visual en un documento extenso?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="El exceso de fuentes distrae al lector y hace que el documento se vea desordenado.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Usar al menos cinco tipos de letra diferentes en cada página.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El exceso de fuentes distrae al lector y hace que el documento se vea desordenado.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Los estilos garantizan coherencia visual y facilitan la creación automática de tablas de contenido.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Utilizar estilos predefinidos para títulos y cuerpos de texto.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Los estilos garantizan coherencia visual y facilitan la creación automática de tablas de contenido.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Los márgenes son necesarios para la legibilidad y para permitir la encuadernación física.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Evitar el uso de márgenes para aprovechar todo el papel.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Los márgenes son necesarios para la legibilidad y para permitir la encuadernación física.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="La negrita pierde su efecto de énfasis si se aplica a todo el contenido indiscriminadamente.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Poner todo el texto en negrita para que se lea mejor.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La negrita pierde su efecto de énfasis si se aplica a todo el contenido indiscriminadamente.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="18">
+          <div class="q-header">
+            <span class="q-number">Question 19</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Qué herramienta de Word te avisa sobre posibles errores de escritura mediante líneas onduladas rojas o azules?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Los sinónimos ayudan a variar el vocabulario, pero no marcan errores automáticamente.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Buscador de sinónimos</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Los sinónimos ayudan a variar el vocabulario, pero no marcan errores automáticamente.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Word analiza el texto comparándolo con diccionarios y reglas gramaticales para señalar fallos.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Revisión de ortografía y gramática</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Word analiza el texto comparándolo con diccionarios y reglas gramaticales para señalar fallos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Esta herramienta se usa para ver quién editó qué en un documento compartido, no para errores lingüísticos.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Control de cambios</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta herramienta se usa para ver quién editó qué en un documento compartido, no para errores lingüísticos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Esta función se encarga del diseño estético de las tablas, no del contenido textual del documento.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Autoformato de tablas</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta función se encarga del diseño estético de las tablas, no del contenido textual del documento.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="19">
+          <div class="q-header">
+            <span class="q-number">Question 20</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Al configurar la impresión, ¿qué campo permite determinar cuántas veces se imprimirá el mismo documento completo?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Este campo define qué hojas específicas se imprimirán, no la cantidad de repeticiones.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Intervalo de páginas</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Este campo define qué hojas específicas se imprimirán, no la cantidad de repeticiones.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Ajustar este valor indica a la impresora cuántos juegos idénticos del documento debe producir.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Número de copias</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Ajustar este valor indica a la impresora cuántos juegos idénticos del documento debe producir.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Determina si la hoja se imprime de forma vertical u horizontal.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Orientación de página</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Determina si la hoja se imprime de forma vertical u horizontal.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Se usa para ajustar el tamaño del documento a un papel de dimensiones diferentes.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Escalado de papel</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Se usa para ajustar el tamaño del documento a un papel de dimensiones diferentes.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="20">
+          <div class="q-header">
+            <span class="q-number">Question 21</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿En qué pestaña de la cinta de opciones se encuentran las herramientas para añadir tablas, imágenes y formas?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="La pestaña Inicio se centra en el formato del texto y párrafos.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Inicio</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La pestaña Inicio se centra en el formato del texto y párrafos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Como su nombre indica, agrupa todas las funciones destinadas a añadir elementos externos al flujo de texto.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Insertar</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Como su nombre indica, agrupa todas las funciones destinadas a añadir elementos externos al flujo de texto.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Se utiliza para índices, citas bibliográficas y notas al pie.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Referencias</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Se utiliza para índices, citas bibliográficas y notas al pie.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Controla cómo se muestra el documento en pantalla, no qué contenido se le añade.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Vista</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Controla cómo se muestra el documento en pantalla, no qué contenido se le añade.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="21">
+          <div class="q-header">
+            <span class="q-number">Question 22</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Si estás escribiendo una carta formal y necesitas colocar la fecha en el extremo derecho de la página, ¿qué botón de alineación deberías usar?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Centrar colocaría la fecha a la misma distancia de ambos márgenes.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Centrar</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Centrar colocaría la fecha a la misma distancia de ambos márgenes.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Esta opción empuja el texto contra el margen derecho, cumpliendo con las normas de estilo de muchas cartas formales.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Alinear a la derecha</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta opción empuja el texto contra el margen derecho, cumpliendo con las normas de estilo de muchas cartas formales.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="El justificado expandiría la fecha entre ambos márgenes, lo cual no tiene sentido para una línea corta.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Justificar</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El justificado expandiría la fecha entre ambos márgenes, lo cual no tiene sentido para una línea corta.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Es la alineación por defecto y mantendría la fecha en el lado habitual de escritura.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Alinear a la izquierda</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Es la alineación por defecto y mantendría la fecha en el lado habitual de escritura.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="22">
+          <div class="q-header">
+            <span class="q-number">Question 23</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Cuál es la consecuencia de utilizar tamaños de letra demasiado pequeños (menores a 8 puntos) en un informe impreso?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="La profesionalidad también depende de que el documento sea legible para el destinatario.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">El documento se verá más profesional y elegante.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La profesionalidad también depende de que el documento sea legible para el destinatario.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Los tamaños muy reducidos cansan la vista y pueden hacer que el contenido sea inaccesible.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Dificulta considerablemente la lectura para la mayoría de las personas.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Los tamaños muy reducidos cansan la vista y pueden hacer que el contenido sea inaccesible.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="La velocidad de impresión no está vinculada al tamaño de la fuente utilizada.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Permite que la impresora trabaje más rápido.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La velocidad de impresión no está vinculada al tamaño de la fuente utilizada.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Word permite tamaños muy pequeños, pero advierte implícitamente a través de la guía sobre sus desventajas.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Word no permite guardar documentos con letras tan pequeñas.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Word permite tamaños muy pequeños, pero advierte implícitamente a través de la guía sobre sus desventajas.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="23">
+          <div class="q-header">
+            <span class="q-number">Question 24</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Qué atajo de teclado se utiliza para aplicar el estilo de 'Cursiva' al texto seleccionado?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Este comando se reserva para la función de 'Copiar'.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Ctrl + C</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Este comando se reserva para la función de 'Copiar'.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Ctrl + I activa la cursiva (itálica), inclinando ligeramente el texto hacia la derecha.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Ctrl + I</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Ctrl + I activa la cursiva (itálica), inclinando ligeramente el texto hacia la derecha.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Aunque en algunas versiones locales se usa, la guía educativa destaca una letra específica asociada a la palabra 'Italic'.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Ctrl + K</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Aunque en algunas versiones locales se usa, la guía educativa destaca una letra específica asociada a la palabra 'Italic'.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Se utiliza para el subrayado (Underline).">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Ctrl + U</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Se utiliza para el subrayado (Underline).</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="24">
+          <div class="q-header">
+            <span class="q-number">Question 25</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Cuál de las siguientes es una vista del documento disponible en Word para facilitar la lectura sin distracciones?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Aunque existe en versiones modernas, la guía menciona específicamente tres tipos de diseño principales.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Modo de enfoque</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Aunque existe en versiones modernas, la guía menciona específicamente tres tipos de diseño principales.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Esta vista maximiza el espacio para el texto y oculta la mayoría de las herramientas de edición.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Modo de lectura</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta vista maximiza el espacio para el texto y oculta la mayoría de las herramientas de edición.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Este término pertenece a PowerPoint, no a los modos de visualización estándar de Word.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Diseño de diapositiva</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Este término pertenece a PowerPoint, no a los modos de visualización estándar de Word.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Word es un editor visual (WYSIWYG) y no está diseñado para editar código de programación directamente.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Vista de código fuente</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Word es un editor visual (WYSIWYG) y no está diseñado para editar código de programación directamente.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="25">
+          <div class="q-header">
+            <span class="q-number">Question 26</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Al trabajar con tablas, ¿qué significa la acción de 'Combinar celdas'?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Eliminar es una acción destructiva total, no una modificación de estructura.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Eliminar toda la tabla y sus datos.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Eliminar es una acción destructiva total, no una modificación de estructura.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Esto es útil para crear encabezados que abarquen varias columnas o filas.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Unir dos o más celdas adyacentes para formar una sola celda más grande.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esto es útil para crear encabezados que abarquen varias columnas o filas.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="El cambio de color se conoce como sombreado o relleno.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Cambiar el color de fondo de cada celda de forma aleatoria.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El cambio de color se conoce como sombreado o relleno.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Word no es una hoja de cálculo; las operaciones matemáticas no son su función estructural principal.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Multiplicar el contenido numérico de las celdas seleccionadas.</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Word no es una hoja de cálculo; las operaciones matemáticas no son su función estructural principal.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="26">
+          <div class="q-header">
+            <span class="q-number">Question 27</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">En el menú 'Guardar como', ¿qué opción permite elegir una carpeta específica en el ordenador que no aparece en la lista de recientes?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Cerrar simplemente finaliza la sesión del documento sin salvar cambios nuevos.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Cerrar</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Cerrar simplemente finaliza la sesión del documento sin salvar cambios nuevos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="El botón Examinar abre una ventana del explorador de archivos para navegar por toda la estructura de carpetas.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Examinar</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El botón Examinar abre una ventana del explorador de archivos para navegar por toda la estructura de carpetas.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Esta opción se usa para conectar servicios en la nube, no para buscar en carpetas locales.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Agregar un sitio</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta opción se usa para conectar servicios en la nube, no para buscar en carpetas locales.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Exportar se usa para cambiar el tipo de archivo, no necesariamente para navegar por la ubicación.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Exportar</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Exportar se usa para cambiar el tipo de archivo, no necesariamente para navegar por la ubicación.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="27">
+          <div class="q-header">
+            <span class="q-number">Question 28</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">¿Cuál es la extensión de archivo predeterminada que utiliza Microsoft Word para sus documentos modernos?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="Es el formato de texto plano que no guarda estilos ni imágenes.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">.txt</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Es el formato de texto plano que no guarda estilos ni imágenes.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Es el formato estándar que soporta todas las características avanzadas de formato y multimedia de Word.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">.docx</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Es el formato estándar que soporta todas las características avanzadas de formato y multimedia de Word.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="Esta extensión corresponde a archivos ejecutables o programas, no a documentos de texto.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">.exe</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Esta extensión corresponde a archivos ejecutables o programas, no a documentos de texto.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="Es una extensión para archivos de imagen, no para procesadores de texto.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">.jpg</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Es una extensión para archivos de imagen, no para procesadores de texto.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="28">
+          <div class="q-header">
+            <span class="q-number">Question 29</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Al usar la función 'Cortar' (Ctrl + X), ¿dónde se guarda temporalmente el texto antes de ser pegado?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="La papelera es para archivos borrados del disco duro, no para fragmentos de texto.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">En la papelera de reciclaje</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La papelera es para archivos borrados del disco duro, no para fragmentos de texto.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="El portapapeles es un área de memoria temporal que almacena el último elemento copiado o cortado.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">En el portapapeles</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El portapapeles es un área de memoria temporal que almacena el último elemento copiado o cortado.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="El texto seleccionado no se guarda como un archivo independiente en el disco.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">En una carpeta oculta de Documentos</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El texto seleccionado no se guarda como un archivo independiente en el disco.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="El contenido permanece en el portapapeles hasta que se copie algo nuevo o se apague el equipo.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Se pierde si no se pega en menos de 10 segundos</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El contenido permanece en el portapapeles hasta que se copie algo nuevo o se apague el equipo.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      
+        <div class="question" data-index="29">
+          <div class="q-header">
+            <span class="q-number">Question 30</span>
+            <span class="q-of">/ 30</span>
+          </div>
+          <div class="q-text">Si un documento tiene un borde derecho muy irregular, ¿qué alineación se le ha aplicado probablemente?</div>
+          
+          <div class="options">
+        <div class="option-wrapper">
+          <button class="option" data-label="A" data-correct="false" data-rationale="El justificado dejaría ambos bordes rectos.">
+            <span class="opt-label">A</span>
+            <span class="opt-text">Justificado</span>
+          </button>
+          <div class="option-feedback hidden" data-for="A">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El justificado dejaría ambos bordes rectos.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="B" data-correct="true" data-rationale="Al alinear todo al inicio de la línea (izquierda), el final de cada línea varía según la longitud de las palabras.">
+            <span class="opt-label">B</span>
+            <span class="opt-text">Alineación a la izquierda</span>
+          </button>
+          <div class="option-feedback hidden" data-for="B">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">Al alinear todo al inicio de la línea (izquierda), el final de cada línea varía según la longitud de las palabras.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="C" data-correct="false" data-rationale="La alineación a la derecha dejaría el borde izquierdo irregular y el derecho recto.">
+            <span class="opt-label">C</span>
+            <span class="opt-text">Alineación a la derecha</span>
+          </button>
+          <div class="option-feedback hidden" data-for="C">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">La alineación a la derecha dejaría el borde izquierdo irregular y el derecho recto.</div>
+          </div>
+        </div>
+      
+        <div class="option-wrapper">
+          <button class="option" data-label="D" data-correct="false" data-rationale="El centrado dejaría ambos bordes irregulares, pero de forma simétrica.">
+            <span class="opt-label">D</span>
+            <span class="opt-text">Centrado</span>
+          </button>
+          <div class="option-feedback hidden" data-for="D">
+            <div class="feedback-status"></div>
+            <div class="feedback-rationale">El centrado dejaría ambos bordes irregulares, pero de forma simétrica.</div>
+          </div>
+        </div>
+      </div>
+          <button class="next-btn hidden">Next Question →</button>
+        </div>
+      </div>
+  <div class="results" id="results">
+    <h2>Quiz Complete!</h2>
+    <div class="score" id="score">0%</div>
+    <div class="score-text" id="score-text"></div>
+    <button class="restart-btn" onclick="restart()">Try Again</button>
+  </div>
+</div>
+<script>
+const quizData = [{"question":"¿Cuál es la función primordial de Microsoft Word dentro de un entorno profesional?","hint":"","options":[{"label":"A","text":"Crear y gestionar bases de datos complejas.","isCorrect":false,"rationale":"La gestión de bases de datos es una función característica de programas como Microsoft Access, no de un procesador de texto."},{"label":"B","text":"Procesar textos para crear documentos profesionales y académicos.","isCorrect":true,"rationale":"Microsoft Word está diseñado específicamente para la redacción, edición y formato de diversos tipos de documentos escritos."},{"label":"C","text":"Realizar cálculos matemáticos y análisis de datos mediante celdas.","isCorrect":false,"rationale":"Esta es la función principal de las hojas de cálculo como Microsoft Excel."},{"label":"D","text":"Editar videos y archivos de audio de alta fidelidad.","isCorrect":false,"rationale":"Word carece de herramientas para la edición multimedia avanzada de video o audio."}]},{"question":"Al iniciar un nuevo proyecto en Word, ¿qué opción se debe elegir para comenzar desde una página sin contenido previo?","hint":"","options":[{"label":"A","text":"Nuevo diseño web","isCorrect":false,"rationale":"Esta opción se utiliza para crear contenido optimizado para navegadores, no es el punto de partida estándar para documentos."},{"label":"B","text":"Documento en blanco","isCorrect":true,"rationale":"Seleccionar un documento en blanco proporciona un lienzo limpio y listo para la entrada de texto manual."},{"label":"C","text":"Plantilla de currículum","isCorrect":false,"rationale":"Las plantillas ya contienen estructuras y diseños predefinidos que no corresponden a una página vacía."},{"label":"D","text":"Abrir archivo reciente","isCorrect":false,"rationale":"Esta opción carga un trabajo guardado previamente en lugar de iniciar uno nuevo desde cero."}]},{"question":"¿Qué indica el cursor parpadeante en el área de trabajo de Word?","hint":"","options":[{"label":"A","text":"El lugar exacto donde aparecerá el texto al escribir.","isCorrect":true,"rationale":"El cursor actúa como un marcador de posición visual para la entrada de caracteres a través del teclado."},{"label":"B","text":"Un error de ortografía detectado automáticamente.","isCorrect":false,"rationale":"Los errores ortográficos se señalan generalmente con líneas de colores, no con el cursor de escritura."},{"label":"C","text":"Que el documento se está guardando automáticamente.","isCorrect":false,"rationale":"El guardado automático suele indicarse en la barra de título o estado, no mediante el cursor."},{"label":"D","text":"El límite del margen derecho de la página.","isCorrect":false,"rationale":"Los márgenes están delimitados por la regla o el espacio gris del área de trabajo, no por el cursor parpadeante."}]},{"question":"¿Cuál es la combinación de teclas estándar para guardar los cambios en un documento ya existente?","hint":"","options":[{"label":"A","text":"Ctrl + G","isCorrect":false,"rationale":"Aunque en algunas versiones en español se usa esta tecla, el estándar universal mencionado en la guía educativa es diferente."},{"label":"B","text":"Ctrl + P","isCorrect":false,"rationale":"Este atajo se utiliza para abrir el menú de impresión del documento."},{"label":"C","text":"Ctrl + S","isCorrect":true,"rationale":"Ctrl + S es el comando rápido para actualizar el archivo con los cambios más recientes."},{"label":"D","text":"Ctrl + V","isCorrect":false,"rationale":"Esta combinación se utiliza para pegar contenido que se encuentra en el portapapeles."}]},{"question":"Dentro de la interfaz de Word, ¿cómo se denomina la franja superior que organiza las herramientas en pestañas?","hint":"","options":[{"label":"A","text":"Barra de estado","isCorrect":false,"rationale":"La barra de estado se encuentra en la parte inferior y muestra información sobre el documento."},{"label":"B","text":"Cinta de opciones o Ribbon","isCorrect":true,"rationale":"El Ribbon agrupa funciones relacionadas en pestañas como Inicio, Insertar y Diseño para facilitar el acceso."},{"label":"C","text":"Menú de inicio rápido","isCorrect":false,"rationale":"Esta es una pequeña barra personalizable con iconos de uso frecuente, no la estructura principal de pestañas."},{"label":"D","text":"Área de navegación","isCorrect":false,"rationale":"El área de navegación suele ser un panel lateral para buscar texto o moverse por títulos."}]},{"question":"Si deseas seleccionar una palabra completa rápidamente sin arrastrar el ratón, ¿qué acción debes realizar?","hint":"","options":[{"label":"A","text":"Hacer clic derecho sobre la palabra.","isCorrect":false,"rationale":"El clic derecho abre un menú contextual de opciones, pero no selecciona la palabra por sí solo."},{"label":"B","text":"Hacer doble clic sobre la palabra.","isCorrect":true,"rationale":"El doble clic es un atajo de ratón diseñado para seleccionar automáticamente la unidad léxica bajo el cursor."},{"label":"C","text":"Presionar la tecla Alt y hacer clic.","isCorrect":false,"rationale":"Esta combinación suele usarse para funciones de investigación o selección vertical, no para palabras individuales."},{"label":"D","text":"Hacer clic una sola vez al inicio de la palabra.","isCorrect":false,"rationale":"Un solo clic solo posiciona el cursor en ese punto sin realizar ninguna selección de texto."}]},{"question":"¿Cuál es la diferencia fundamental entre 'Cortar' (Ctrl + X) y 'Copiar' (Ctrl + C)?","hint":"","options":[{"label":"A","text":"'Cortar' duplica el texto, mientras que 'Copiar' lo mueve a otro lugar.","isCorrect":false,"rationale":"Es exactamente al revés; la duplicación es característica de la copia."},{"label":"B","text":"'Cortar' elimina el texto de su ubicación original, mientras que 'Copiar' lo mantiene.","isCorrect":true,"rationale":"Cortar traslada el contenido al portapapeles eliminándolo del origen, mientras que copiar crea una réplica exacta."},{"label":"C","text":"'Copiar' requiere una conexión a internet, pero 'Cortar' no.","isCorrect":false,"rationale":"Ambas funciones son locales del procesador de texto y no dependen de la red."},{"label":"D","text":"No existe diferencia; ambas realizan la misma acción en el documento.","isCorrect":false,"rationale":"Tienen propósitos distintos: uno para mover contenido y otro para replicarlo."}]},{"question":"¿Qué alineación de texto es la más adecuada para darle a un documento formal un aspecto de libro con bordes rectos en ambos lados?","hint":"","options":[{"label":"A","text":"Alinear a la izquierda","isCorrect":false,"rationale":"Esta alineación deja el borde derecho irregular, lo cual es común pero menos formal que el justificado."},{"label":"B","text":"Alinear al centro","isCorrect":false,"rationale":"Se usa principalmente para títulos y no crea bordes rectos laterales."},{"label":"C","text":"Texto justificado","isCorrect":true,"rationale":"El texto justificado distribuye el espacio entre palabras para que los párrafos se alineen perfectamente con ambos márgenes."},{"label":"D","text":"Alinear a la derecha","isCorrect":false,"rationale":"Esta alineación se utiliza para fechas o firmas, dejando el borde izquierdo irregular."}]},{"question":"Para enfatizar una palabra importante sin cambiar su tamaño ni su tipo de letra, ¿qué estilos de formato se recomiendan?","hint":"","options":[{"label":"A","text":"Negrita, Cursiva o Subrayado","isCorrect":true,"rationale":"Estos estilos modifican la apariencia visual del texto existente para destacar ideas clave de forma profesional."},{"label":"B","text":"Solo cambio de color a rojo","isCorrect":false,"rationale":"Aunque destaca, el uso excesivo de colores puede considerarse poco profesional en comparación con la negrita o cursiva."},{"label":"C","text":"Uso de mayúsculas en todo el párrafo","isCorrect":false,"rationale":"Escribir todo en mayúsculas dificulta la lectura y puede interpretarse como 'gritar' en la comunicación escrita."},{"label":"D","text":"Insertar un cuadro de texto para cada palabra","isCorrect":false,"rationale":"Es un proceso ineficiente que complica la estructura y edición del documento."}]},{"question":"¿En qué situación es preferible utilizar una lista numerada en lugar de una lista con viñetas?","hint":"","options":[{"label":"A","text":"Para enumerar los ingredientes de una receta sin un orden específico.","isCorrect":false,"rationale":"Las viñetas son ideales cuando el orden de los elementos no altera el resultado."},{"label":"B","text":"Para describir una secuencia lógica de pasos o instrucciones.","isCorrect":true,"rationale":"La numeración establece una jerarquía u orden cronológico necesario para seguir procesos correctamente."},{"label":"C","text":"Para presentar una lista de ideas en una lluvia de ideas.","isCorrect":false,"rationale":"Las viñetas suelen ser suficientes para listas simples de conceptos desordenados."},{"label":"D","text":"Cuando se desea usar diferentes colores en cada punto.","isCorrect":false,"rationale":"El color se puede aplicar tanto a viñetas como a números, no define la elección entre ellos."}]},{"question":"Al insertar una imagen en un documento, ¿qué tecla se debe mantener presionada mientras se arrastra una esquina para evitar que la imagen se deforme?","hint":"","options":[{"label":"A","text":"Ctrl","isCorrect":false,"rationale":"En muchas versiones, Ctrl redimensiona desde el centro, pero no garantiza mantener la proporción por sí sola."},{"label":"B","text":"Shift (Mayús)","isCorrect":true,"rationale":"Mantener presionada la tecla Shift bloquea la relación de aspecto, asegurando que el ancho y el alto cambien proporcionalmente."},{"label":"C","text":"Alt","isCorrect":false,"rationale":"Alt se utiliza normalmente para un ajuste más fino ignorando la rejilla, no para mantener proporciones."},{"label":"D","text":"Tab","isCorrect":false,"rationale":"La tecla Tab se usa para navegación o sangrías, no influye en el redimensionamiento de imágenes."}]},{"question":"Si necesitas organizar datos comparativos, como horarios o listas de precios, ¿qué herramienta de Word es la más efectiva?","hint":"","options":[{"label":"A","text":"Formas y flechas","isCorrect":false,"rationale":"Las formas son útiles para diagramas, pero difíciles de alinear para datos tabulares precisos."},{"label":"B","text":"Tablas","isCorrect":true,"rationale":"Las tablas permiten estructurar la información en filas y columnas, facilitando la comparación y lectura de datos."},{"label":"C","text":"Cuadros de texto independientes","isCorrect":false,"rationale":"Usar múltiples cuadros de texto para alinear datos es propenso a errores de formato y difícil de mantener."},{"label":"D","text":"Imágenes prediseñadas","isCorrect":false,"rationale":"Las imágenes son elementos visuales estáticos y no permiten la edición de datos organizados."}]},{"question":"¿Cuál es la principal ventaja de guardar un documento en formato .pdf antes de compartirlo?","hint":"","options":[{"label":"A","text":"Permite que cualquier persona edite el texto fácilmente.","isCorrect":false,"rationale":"Al contrario, el PDF se utiliza para restringir la edición sencilla del contenido."},{"label":"B","text":"Asegura que el documento se vea igual en cualquier dispositivo o sistema operativo.","isCorrect":true,"rationale":"El formato PDF preserva las fuentes, imágenes y el diseño original, evitando variaciones de visualización."},{"label":"C","text":"Aumenta automáticamente la resolución de todas las imágenes insertadas.","isCorrect":false,"rationale":"Guardar como PDF no mejora la calidad de origen de las imágenes."},{"label":"D","text":"Es el único formato que permite imprimir a color.","isCorrect":false,"rationale":"La impresión a color depende de la impresora y la configuración, no del formato del archivo."}]},{"question":"Antes de enviar un documento a la impresora, ¿qué paso es fundamental para evitar el desperdicio de papel y tinta?","hint":"","options":[{"label":"A","text":"Cambiar el color de toda la fuente a gris.","isCorrect":false,"rationale":"Esto no previene errores de diseño o contenido y puede dificultar la lectura."},{"label":"B","text":"Revisar la Vista Previa de Impresión.","isCorrect":true,"rationale":"La vista previa permite verificar márgenes, saltos de página y diseño general antes de la impresión física."},{"label":"C","text":"Cerrar el programa y volverlo a abrir.","isCorrect":false,"rationale":"Reiniciar el programa no garantiza que el contenido del documento esté correctamente formateado."},{"label":"D","text":"Aumentar el zoom al $500 \\%$ para ver detalles.","isCorrect":false,"rationale":"Un zoom tan alto impide ver la disposición general de la página, que es lo que se refleja al imprimir."}]},{"question":"¿Qué utilidad tiene la 'Barra de Estado' ubicada en la parte inferior de la ventana de Word?","hint":"","options":[{"label":"A","text":"Contiene los botones para cambiar el tipo de letra.","isCorrect":false,"rationale":"El formato de fuente se gestiona desde la pestaña Inicio en la parte superior."},{"label":"B","text":"Muestra información como el número de página, conteo de palabras y nivel de zoom.","isCorrect":true,"rationale":"Proporciona metadatos en tiempo real sobre el estado y la extensión del documento actual."},{"label":"C","text":"Es donde se escriben los títulos principales del documento.","isCorrect":false,"rationale":"Los títulos se escriben directamente en el área de trabajo central."},{"label":"D","text":"Permite buscar archivos guardados en el disco duro.","isCorrect":false,"rationale":"La búsqueda de archivos se realiza desde el explorador de archivos o el menú Abrir."}]},{"question":"¿Para qué sirve la combinación de teclas Ctrl + Z?","hint":"","options":[{"label":"A","text":"Para borrar permanentemente el archivo del sistema.","isCorrect":false,"rationale":"Ctrl + Z no tiene funciones de gestión de archivos en el disco, solo ediciones internas."},{"label":"B","text":"Para deshacer la última acción realizada.","isCorrect":true,"rationale":"Es la función de 'marcha atrás' que permite corregir errores inmediatos volviendo al estado anterior."},{"label":"C","text":"Para aplicar el formato de negrita al texto.","isCorrect":false,"rationale":"La negrita se aplica con Ctrl + B (en inglés Bold)."},{"label":"D","text":"Para saltar a la última página del documento.","isCorrect":false,"rationale":"Existen otras combinaciones para la navegación, pero Ctrl + Z se limita a la edición."}]},{"question":"En el contexto de la edición de documentos, ¿qué significa 'Rehacer' (Ctrl + Y)?","hint":"","options":[{"label":"A","text":"Escribir el documento desde cero nuevamente.","isCorrect":false,"rationale":"Rehacer no implica borrar todo el trabajo previo."},{"label":"B","text":"Volver a aplicar una acción que fue deshecha previamente.","isCorrect":true,"rationale":"Si deshiciste algo por error, Ctrl + Y recupera esa acción específica."},{"label":"C","text":"Cambiar el idioma del corrector ortográfico.","isCorrect":false,"rationale":"El idioma se configura en las opciones de revisión, no con este atajo."},{"label":"D","text":"Guardar una copia de seguridad en la nube.","isCorrect":false,"rationale":"El guardado en la nube es un proceso de gestión de archivos independiente de la edición de texto."}]},{"question":"¿Cuál es un consejo clave para mantener la profesionalidad visual en un documento extenso?","hint":"","options":[{"label":"A","text":"Usar al menos cinco tipos de letra diferentes en cada página.","isCorrect":false,"rationale":"El exceso de fuentes distrae al lector y hace que el documento se vea desordenado."},{"label":"B","text":"Utilizar estilos predefinidos para títulos y cuerpos de texto.","isCorrect":true,"rationale":"Los estilos garantizan coherencia visual y facilitan la creación automática de tablas de contenido."},{"label":"C","text":"Evitar el uso de márgenes para aprovechar todo el papel.","isCorrect":false,"rationale":"Los márgenes son necesarios para la legibilidad y para permitir la encuadernación física."},{"label":"D","text":"Poner todo el texto en negrita para que se lea mejor.","isCorrect":false,"rationale":"La negrita pierde su efecto de énfasis si se aplica a todo el contenido indiscriminadamente."}]},{"question":"¿Qué herramienta de Word te avisa sobre posibles errores de escritura mediante líneas onduladas rojas o azules?","hint":"","options":[{"label":"A","text":"Buscador de sinónimos","isCorrect":false,"rationale":"Los sinónimos ayudan a variar el vocabulario, pero no marcan errores automáticamente."},{"label":"B","text":"Revisión de ortografía y gramática","isCorrect":true,"rationale":"Word analiza el texto comparándolo con diccionarios y reglas gramaticales para señalar fallos."},{"label":"C","text":"Control de cambios","isCorrect":false,"rationale":"Esta herramienta se usa para ver quién editó qué en un documento compartido, no para errores lingüísticos."},{"label":"D","text":"Autoformato de tablas","isCorrect":false,"rationale":"Esta función se encarga del diseño estético de las tablas, no del contenido textual del documento."}]},{"question":"Al configurar la impresión, ¿qué campo permite determinar cuántas veces se imprimirá el mismo documento completo?","hint":"","options":[{"label":"A","text":"Intervalo de páginas","isCorrect":false,"rationale":"Este campo define qué hojas específicas se imprimirán, no la cantidad de repeticiones."},{"label":"B","text":"Número de copias","isCorrect":true,"rationale":"Ajustar este valor indica a la impresora cuántos juegos idénticos del documento debe producir."},{"label":"C","text":"Orientación de página","isCorrect":false,"rationale":"Determina si la hoja se imprime de forma vertical u horizontal."},{"label":"D","text":"Escalado de papel","isCorrect":false,"rationale":"Se usa para ajustar el tamaño del documento a un papel de dimensiones diferentes."}]},{"question":"¿En qué pestaña de la cinta de opciones se encuentran las herramientas para añadir tablas, imágenes y formas?","hint":"","options":[{"label":"A","text":"Inicio","isCorrect":false,"rationale":"La pestaña Inicio se centra en el formato del texto y párrafos."},{"label":"B","text":"Insertar","isCorrect":true,"rationale":"Como su nombre indica, agrupa todas las funciones destinadas a añadir elementos externos al flujo de texto."},{"label":"C","text":"Referencias","isCorrect":false,"rationale":"Se utiliza para índices, citas bibliográficas y notas al pie."},{"label":"D","text":"Vista","isCorrect":false,"rationale":"Controla cómo se muestra el documento en pantalla, no qué contenido se le añade."}]},{"question":"Si estás escribiendo una carta formal y necesitas colocar la fecha en el extremo derecho de la página, ¿qué botón de alineación deberías usar?","hint":"","options":[{"label":"A","text":"Centrar","isCorrect":false,"rationale":"Centrar colocaría la fecha a la misma distancia de ambos márgenes."},{"label":"B","text":"Alinear a la derecha","isCorrect":true,"rationale":"Esta opción empuja el texto contra el margen derecho, cumpliendo con las normas de estilo de muchas cartas formales."},{"label":"C","text":"Justificar","isCorrect":false,"rationale":"El justificado expandiría la fecha entre ambos márgenes, lo cual no tiene sentido para una línea corta."},{"label":"D","text":"Alinear a la izquierda","isCorrect":false,"rationale":"Es la alineación por defecto y mantendría la fecha en el lado habitual de escritura."}]},{"question":"¿Cuál es la consecuencia de utilizar tamaños de letra demasiado pequeños (menores a 8 puntos) en un informe impreso?","hint":"","options":[{"label":"A","text":"El documento se verá más profesional y elegante.","isCorrect":false,"rationale":"La profesionalidad también depende de que el documento sea legible para el destinatario."},{"label":"B","text":"Dificulta considerablemente la lectura para la mayoría de las personas.","isCorrect":true,"rationale":"Los tamaños muy reducidos cansan la vista y pueden hacer que el contenido sea inaccesible."},{"label":"C","text":"Permite que la impresora trabaje más rápido.","isCorrect":false,"rationale":"La velocidad de impresión no está vinculada al tamaño de la fuente utilizada."},{"label":"D","text":"Word no permite guardar documentos con letras tan pequeñas.","isCorrect":false,"rationale":"Word permite tamaños muy pequeños, pero advierte implícitamente a través de la guía sobre sus desventajas."}]},{"question":"¿Qué atajo de teclado se utiliza para aplicar el estilo de 'Cursiva' al texto seleccionado?","hint":"","options":[{"label":"A","text":"Ctrl + C","isCorrect":false,"rationale":"Este comando se reserva para la función de 'Copiar'."},{"label":"B","text":"Ctrl + I","isCorrect":true,"rationale":"Ctrl + I activa la cursiva (itálica), inclinando ligeramente el texto hacia la derecha."},{"label":"C","text":"Ctrl + K","isCorrect":false,"rationale":"Aunque en algunas versiones locales se usa, la guía educativa destaca una letra específica asociada a la palabra 'Italic'."},{"label":"D","text":"Ctrl + U","isCorrect":false,"rationale":"Se utiliza para el subrayado (Underline)."}]},{"question":"¿Cuál de las siguientes es una vista del documento disponible en Word para facilitar la lectura sin distracciones?","hint":"","options":[{"label":"A","text":"Modo de enfoque","isCorrect":false,"rationale":"Aunque existe en versiones modernas, la guía menciona específicamente tres tipos de diseño principales."},{"label":"B","text":"Modo de lectura","isCorrect":true,"rationale":"Esta vista maximiza el espacio para el texto y oculta la mayoría de las herramientas de edición."},{"label":"C","text":"Diseño de diapositiva","isCorrect":false,"rationale":"Este término pertenece a PowerPoint, no a los modos de visualización estándar de Word."},{"label":"D","text":"Vista de código fuente","isCorrect":false,"rationale":"Word es un editor visual (WYSIWYG) y no está diseñado para editar código de programación directamente."}]},{"question":"Al trabajar con tablas, ¿qué significa la acción de 'Combinar celdas'?","hint":"","options":[{"label":"A","text":"Eliminar toda la tabla y sus datos.","isCorrect":false,"rationale":"Eliminar es una acción destructiva total, no una modificación de estructura."},{"label":"B","text":"Unir dos o más celdas adyacentes para formar una sola celda más grande.","isCorrect":true,"rationale":"Esto es útil para crear encabezados que abarquen varias columnas o filas."},{"label":"C","text":"Cambiar el color de fondo de cada celda de forma aleatoria.","isCorrect":false,"rationale":"El cambio de color se conoce como sombreado o relleno."},{"label":"D","text":"Multiplicar el contenido numérico de las celdas seleccionadas.","isCorrect":false,"rationale":"Word no es una hoja de cálculo; las operaciones matemáticas no son su función estructural principal."}]},{"question":"En el menú 'Guardar como', ¿qué opción permite elegir una carpeta específica en el ordenador que no aparece en la lista de recientes?","hint":"","options":[{"label":"A","text":"Cerrar","isCorrect":false,"rationale":"Cerrar simplemente finaliza la sesión del documento sin salvar cambios nuevos."},{"label":"B","text":"Examinar","isCorrect":true,"rationale":"El botón Examinar abre una ventana del explorador de archivos para navegar por toda la estructura de carpetas."},{"label":"C","text":"Agregar un sitio","isCorrect":false,"rationale":"Esta opción se usa para conectar servicios en la nube, no para buscar en carpetas locales."},{"label":"D","text":"Exportar","isCorrect":false,"rationale":"Exportar se usa para cambiar el tipo de archivo, no necesariamente para navegar por la ubicación."}]},{"question":"¿Cuál es la extensión de archivo predeterminada que utiliza Microsoft Word para sus documentos modernos?","hint":"","options":[{"label":"A","text":".txt","isCorrect":false,"rationale":"Es el formato de texto plano que no guarda estilos ni imágenes."},{"label":"B","text":".docx","isCorrect":true,"rationale":"Es el formato estándar que soporta todas las características avanzadas de formato y multimedia de Word."},{"label":"C","text":".exe","isCorrect":false,"rationale":"Esta extensión corresponde a archivos ejecutables o programas, no a documentos de texto."},{"label":"D","text":".jpg","isCorrect":false,"rationale":"Es una extensión para archivos de imagen, no para procesadores de texto."}]},{"question":"Al usar la función 'Cortar' (Ctrl + X), ¿dónde se guarda temporalmente el texto antes de ser pegado?","hint":"","options":[{"label":"A","text":"En la papelera de reciclaje","isCorrect":false,"rationale":"La papelera es para archivos borrados del disco duro, no para fragmentos de texto."},{"label":"B","text":"En el portapapeles","isCorrect":true,"rationale":"El portapapeles es un área de memoria temporal que almacena el último elemento copiado o cortado."},{"label":"C","text":"En una carpeta oculta de Documentos","isCorrect":false,"rationale":"El texto seleccionado no se guarda como un archivo independiente en el disco."},{"label":"D","text":"Se pierde si no se pega en menos de 10 segundos","isCorrect":false,"rationale":"El contenido permanece en el portapapeles hasta que se copie algo nuevo o se apague el equipo."}]},{"question":"Si un documento tiene un borde derecho muy irregular, ¿qué alineación se le ha aplicado probablemente?","hint":"","options":[{"label":"A","text":"Justificado","isCorrect":false,"rationale":"El justificado dejaría ambos bordes rectos."},{"label":"B","text":"Alineación a la izquierda","isCorrect":true,"rationale":"Al alinear todo al inicio de la línea (izquierda), el final de cada línea varía según la longitud de las palabras."},{"label":"C","text":"Alineación a la derecha","isCorrect":false,"rationale":"La alineación a la derecha dejaría el borde izquierdo irregular y el derecho recto."},{"label":"D","text":"Centrado","isCorrect":false,"rationale":"El centrado dejaría ambos bordes irregulares, pero de forma simétrica."}]}];
+const tr = {"correct":"Correct!","incorrect":"Incorrect","next":"Next Question →","seeResults":"See Results","complete":"Quiz Complete!","scoreText":"You got {correct} out of {total} correct","tryAgain":"Try Again","rightAnswer":"Right answer","notQuite":"Not quite"};
+let currentQ = 0, correctCount = 0, answered = false;
+
+function init() {
+  document.querySelectorAll('.question').forEach((q, i) => q.classList.toggle('active', i === 0));
+  updateProgress();
+  document.querySelectorAll('.option').forEach(opt => opt.addEventListener('click', () => selectOption(opt)));
+  document.querySelectorAll('.next-btn').forEach(btn => btn.addEventListener('click', nextQuestion));
+}
+
+function selectOption(opt) {
+  if (answered) return;
+  answered = true;
+  const q = opt.closest('.question');
+  const options = q.querySelectorAll('.option');
+  const nextBtn = q.querySelector('.next-btn');
+  const isCorrect = opt.dataset.correct === 'true';
+  
+  // Mark all options as disabled
+  options.forEach(o => o.classList.add('disabled'));
+  
+  // Style selected option
+  opt.classList.add('selected', isCorrect ? 'correct' : 'incorrect');
+  
+  // Show correct answer if wrong
+  if (!isCorrect) {
+    const correctOpt = [...options].find(o => o.dataset.correct === 'true');
+    if (correctOpt) correctOpt.classList.add('show-correct');
+  }
+  
+  if (isCorrect) correctCount++;
+  
+  // Show feedback for ALL options that have rationale
+  options.forEach(o => {
+    const wrapper = o.closest('.option-wrapper');
+    const feedback = wrapper.querySelector('.option-feedback');
+    const rationale = o.dataset.rationale;
+    const isThisCorrect = o.dataset.correct === 'true';
+    
+    if (rationale && rationale.trim()) {
+      feedback.classList.remove('hidden');
+      feedback.classList.add(isThisCorrect ? 'correct-feedback' : 'incorrect-feedback');
+      
+      const statusEl = feedback.querySelector('.feedback-status');
+      statusEl.className = 'feedback-status ' + (isThisCorrect ? 'correct' : 'incorrect');
+      statusEl.innerHTML = isThisCorrect 
+        ? '✓ ' + tr.rightAnswer
+        : '✗ ' + tr.notQuite;
+    }
+  });
+  
+  nextBtn.classList.remove('hidden');
+  if (currentQ === quizData.length - 1) nextBtn.textContent = tr.seeResults;
+}
+
+function nextQuestion() {
+  answered = false;
+  currentQ++;
+  if (currentQ >= quizData.length) { showResults(); return; }
+  document.querySelectorAll('.question').forEach((q, i) => q.classList.toggle('active', i === currentQ));
+  updateProgress();
+}
+
+function updateProgress() {
+  document.querySelector('.progress-fill').style.width = (currentQ / quizData.length * 100) + '%';
+}
+
+function showResults() {
+  document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
+  document.getElementById('results').classList.add('active');
+  const pct = Math.round((correctCount / quizData.length) * 100);
+  document.getElementById('score').textContent = pct + '%';
+  document.getElementById('score-text').textContent = tr.scoreText.replace('{correct}', correctCount).replace('{total}', quizData.length);
+  document.querySelector('.progress-fill').style.width = '100%';
+}
+
+function restart() {
+  currentQ = 0; correctCount = 0; answered = false;
+  document.getElementById('results').classList.remove('active');
+  document.querySelectorAll('.question').forEach((q, i) => {
+    q.classList.toggle('active', i === 0);
+    q.querySelectorAll('.option').forEach(o => o.classList.remove('selected', 'correct', 'incorrect', 'disabled', 'show-correct'));
+    q.querySelectorAll('.option-feedback').forEach(f => {
+      f.classList.add('hidden');
+      f.classList.remove('correct-feedback', 'incorrect-feedback');
+    });
+    const btn = q.querySelector('.next-btn');
+    btn.classList.add('hidden');
+    btn.textContent = tr.next;
+  });
+  updateProgress();
+}
+
+init();
+</script>
+</body>
+</html>
